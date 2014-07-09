@@ -8,7 +8,6 @@ class Client(object):
     """
     Python wrapper for the OpenKVK API
 
-    :params
     """
 
     BASE_URL = "http://api.openkvk.nl/"
