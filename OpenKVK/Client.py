@@ -260,14 +260,3 @@ class Client(object):
         """
         #TODO custom sql builder
         pass
-
-if __name__ == '__main__':
-    client = Client()
-    #client.setResponseFormat('json')
-
-    #client._do_query('SELECT * FROM kvk WHERE plaats ILIKE "%rotterdam%"',150)
-    #print client.get_by_city('rotterdam',limit=10)
-    #with open("C:/users/jeffrey slort/desktop/test.csv", 'w')as f:
-    #    import csv
-    #    writer = csv.writer(f)
-    #    writer.writerows(client.get_by_name('kpn',limit=100))
