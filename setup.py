@@ -51,13 +51,15 @@ setup(
     test_suite='OpenKVK.test.test_openkvk',
     classifiers = [
         'Programming Language :: Python',
-        'Natural Language :: Nederlands',
+        'Development Status :: 4 - Beta',
+        'Natural Language :: English',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT',
+        'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
+        'Topic :: Office/Business'
         ],
     extras_require={
         'testing': ['pytest'],
