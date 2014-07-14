@@ -2,7 +2,7 @@
 
 ## What is it ?
 
-OpenKVK is an UNOFFICIAL python wrapper for the [**openkvk API**][https://openkvk.nl/api.html]
+OpenKVK is an UNOFFICIAL python wrapper for the [openkvk API](https://openkvk.nl/api.html)
 
 ## Installation
 The source code is currently hosted on GitHub at:

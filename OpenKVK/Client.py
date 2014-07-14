@@ -122,6 +122,7 @@ class Client(object):
         """Takes raw response of :class:OpenKVK.Client.Client._do_query and parses the data to the preferred format
         :param list response_buffer: List of service responses
         """
+        print response_buffer
         result = {}
         if self.response_format == 'json':
             for response in response_buffer:
@@ -182,6 +183,7 @@ class Client(object):
         response_buffer = []
         for q in range(len(query_buffer)):
             url = Client.BASE_URL+self.response_format+"/"+self._urlencode_query(query_buffer[q])
+            print url
             request = urllib2.urlopen(url)
             response = request.read()
             response_buffer.append(response)
@@ -231,6 +233,13 @@ class Client(object):
         basequery = "SELECT {0} FROM kvk WHERE plaats ILIKE '%{1}%'".format(",".join(fields),city)
         return self._do_query(basequery,limit)
 
+    def search(self, searchstring=None ):
+        """
+        Return a list of company information based on a fulltext search
+        """
+        basequery = "SELECT x.kvk, x.bedrijfsnaam, x.adres, x.postcode, x.plaats, x.type,NOT(anbikvk.kvks is null AND anbikvk.intrekking is null) AS 'anbi', status, x.kvks, x.sub FROM (SELECT kvk.kvk, kvk.bedrijfsnaam, kvk.adres, kvk.postcode, kvk.plaats, kvk.type, kvk.kvks, kvk.sub FROM sphinx_searchIndex('{0}', '{1}') AS fts, kvk WHERE kvk.kvk = fts.id) AS x LEFT JOIN anbikvk ON x.kvks = anbikvk.kvks LEFT JOIN faillissementen ON x.kvks = faillissementen.kvk".format(searchstring,'openkvk')
+        return self._do_query(basequery,limit=200)
+
     def get_by_postcode_distance(self,postcode,distance):
         """Return a list of companies within a postcode range
         :param string postcode: Dutch postcode
@@ -259,3 +268,7 @@ class Client(object):
         """
         #TODO custom sql builder
         pass
+
+if __name__ == '__main__':
+    client = Client(response_format='json')
+    print client.search()
