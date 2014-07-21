@@ -162,8 +162,11 @@ class Client(object):
                                 continue
                         if not record == ['']:
                             records.append(record)
-            result.append(header)
-            for record in records: result.append(record)
+            result.append(",".join(header))
+            for record in records:
+                if len(record) > 0:
+                    result.append(",".join(record))
+            result = "\n".join(result)
         else:
             raise ValueError('Unsupported response format')
 
@@ -183,7 +186,6 @@ class Client(object):
         response_buffer = []
         for q in range(len(query_buffer)):
             url = Client.BASE_URL+self.response_format+"/"+self._urlencode_query(query_buffer[q])
-            print url
             request = urllib2.urlopen(url)
             response = request.read()
             response_buffer.append(response)
@@ -198,7 +200,7 @@ class Client(object):
         :param list columns: List of columns
         :returns: Company information
         """
-        basequery = "SELECT {0} FROM kvk WHERE kvk = {1}".format(",".join(fields),kvk)
+        basequery = "SELECT {0} FROM kvk WHERE kvks = {1}".format(",".join(fields),kvk)
         return self._do_query(basequery,1)
 
 
@@ -237,7 +239,7 @@ class Client(object):
         """
         Return a list of company information based on a fulltext search
         """
-        basequery = "SELECT x.kvk, x.bedrijfsnaam, x.adres, x.postcode, x.plaats, x.type,NOT(anbikvk.kvks is null AND anbikvk.intrekking is null) AS 'anbi', status, x.kvks, x.sub FROM (SELECT kvk.kvk, kvk.bedrijfsnaam, kvk.adres, kvk.postcode, kvk.plaats, kvk.type, kvk.kvks, kvk.sub FROM sphinx_searchIndex('{0}', '{1}') AS fts, kvk WHERE kvk.kvk = fts.id) AS x LEFT JOIN anbikvk ON x.kvks = anbikvk.kvks LEFT JOIN faillissementen ON x.kvks = faillissementen.kvk".format(searchstring,'openkvk')
+        basequery = "SELECT x.kvk, x.bedrijfsnaam, x.adres, x.postcode, x.plaats, x.type,NOT(anbikvk.kvks is null AND anbikvk.intrekking is null) AS 'anbi', status, x.kvks, x.sub FROM (SELECT kvk.kvk, kvk.bedrijfsnaam, kvk.adres, kvk.postcode, kvk.plaats, kvk.type, kvk.kvks, kvk.sub FROM sphinx_searchIndex('{0}', '{1}') AS fts, kvk WHERE kvk.kvk = fts.id) AS x LEFT JOIN anbikvk ON x.kvks = anbikvk.kvks LEFT JOIN faillissementen ON x.kvks = faillissementen.kvk".format(searchstring,'*')
         return self._do_query(basequery,limit=200)
 
     def get_by_postcode_distance(self,postcode,distance):
@@ -262,9 +264,12 @@ class Client(object):
         """
         pass
 
-    def get_custom(self,fields,table,filters):
-        """Returns company information of Custom SQL query
+    def get_custom(self,query,limit):
+        """Returns company information based on a custom query.
+        for low-level interaction with the openkvk api, but with the convenience of the parsers used in this module
+
+        :param string query: A SQL-92 query string
+        :param int limit: Maximum number of records
 
         """
-        #TODO custom sql builder
-        pass
+        return self._do_query(query,limit)

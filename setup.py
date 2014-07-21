@@ -62,6 +62,6 @@ setup(
         'Topic :: Office/Business'
         ],
     extras_require={
-        'testing': ['pytest'],
-    }
+        'testing': ['pytest']},
+    entry_points = {'console_scripts': ['openkvk = OpenKVK.cli:main']},
 )
