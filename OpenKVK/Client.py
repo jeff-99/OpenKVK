@@ -232,3 +232,39 @@ class Client(object):
         """
         basequery = "SELECT {0} FROM kvk WHERE plaats ILIKE '%{1}%'".format(",".join(fields),city)
         return self._do_query(basequery,limit)
+
+    def search(self, searchstring=None ):
+        """
+        Return a list of company information based on a fulltext search
+        """
+        basequery = "SELECT x.kvk, x.bedrijfsnaam, x.adres, x.postcode, x.plaats, x.type,NOT(anbikvk.kvks is null AND anbikvk.intrekking is null) AS 'anbi', status, x.kvks, x.sub FROM (SELECT kvk.kvk, kvk.bedrijfsnaam, kvk.adres, kvk.postcode, kvk.plaats, kvk.type, kvk.kvks, kvk.sub FROM sphinx_searchIndex('{0}', '{1}') AS fts, kvk WHERE kvk.kvk = fts.id) AS x LEFT JOIN anbikvk ON x.kvks = anbikvk.kvks LEFT JOIN faillissementen ON x.kvks = faillissementen.kvk".format(searchstring,'openkvk')
+        return self._do_query(basequery,limit=200)
+
+    def get_by_postcode_distance(self,postcode,distance):
+        """Return a list of companies within a postcode range
+        :param string postcode: Dutch postcode
+        :param int distance: Distance from postcode in kilometres
+
+        example haversine formula :
+            R = 6373.0
+
+            lat1 = radians(52.2296756)
+            lon1 = radians(21.0122287)
+            lat2 = radians(52.406374)
+            lon2 = radians(16.9251681)
+
+            dlon = lon2 - lon1
+            dlat = lat2 - lat1
+            a = (sin(dlat/2))**2 + cos(lat1) * cos(lat2) * (sin(dlon/2))**2
+            c = 2 * atan2(sqrt(a), sqrt(1-a))
+            distance = R * c
+
+        """
+        pass
+
+    def get_custom(self,fields,table,filters):
+        """Returns company information of Custom SQL query
+
+        """
+        #TODO custom sql builder
+        pass
