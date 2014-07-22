@@ -1,12 +1,13 @@
-from OpenKVK.Client import Client
+from OpenKVK import BaseClient, QueryBuilder, ApiClient
 import pytest
 import unittest
 import pickle
+import os
 
 
-class TestClient(unittest.TestCase):
+class TestBaseClient(unittest.TestCase):
     def setUp(self):
-        self.client = Client()
+        self.client = BaseClient()
 
     def test_client_urlencode_query(self):
 
@@ -22,6 +23,12 @@ class TestClient(unittest.TestCase):
     def test_response_format(self):
         with pytest.raises(ValueError):
             self.client.setResponseFormat('unsupportedformat')
+
+
+class TestQueryBuilder(unittest.TestCase):
+    def setUp(self):
+        self.client = QueryBuilder()
+        self.dir = os.path.dirname(__file__)
 
     def test__query_divider(self):
         query = "x"
@@ -49,7 +56,8 @@ class TestClient(unittest.TestCase):
         # JSON - 1 query
         assert(self.client._parse_query_results(json_py_result) == '[{"bedrijfsnaam": "Kinkrsoftware"}]')
         # JSON - multiple queries
-        with open('multiple_query_results.json', 'r') as f1:
+        os.path.dirname(__file__)
+        with open(self.dir+'/multiple_query_results.json', 'r') as f1:
             result1 = f1.read()
         assert(self.client._parse_query_results(json_py_multiple_query_result) == result1)
 
@@ -58,7 +66,7 @@ class TestClient(unittest.TestCase):
         # PY - 1 query
         assert(self.client._parse_query_results(json_py_result) == [{"bedrijfsnaam": "Kinkrsoftware"}])
         # py - multiple queries
-        result2 = pickle.load(open('multiple_query_results.pickle','rb'))
+        result2 = pickle.load(open(self.dir+'/multiple_query_results.pickle','rb'))
         assert(self.client._parse_query_results(json_py_multiple_query_result) == result2)
 
         # CSV FORMAT TEST
@@ -66,12 +74,31 @@ class TestClient(unittest.TestCase):
         # CSV - 1 query
         assert(self.client._parse_query_results(csv_result) == 'bedrijfsnaam\nKinkrsoftware')
         # CSV - multiple queries
-        with open('multiple_query_results.csv', 'r') as f3:
+        with open(self.dir+'/multiple_query_results.csv', 'r') as f3:
             result3 = f3.read()
         assert(self.client._parse_query_results(csv_multiple_query_result) == result3)
 
     def test__do_query(self):
         pass
+
+    def test_query(self):
+        with pytest.raises(ValueError):
+            self.client.query(1)
+
+class TestApiClient(unittest.TestCase):
+    def setUp(self):
+        self.client = ApiClient()
+        self.client.setResponseFormat('json')
+
+    def test_get_by_kvk(self):
+        assert(self.client.get_by_kvk(27312152,fields=['bedrijfsnaam'])=='[{"bedrijfsnaam": "Kinkrsoftware"}]')
+
+    def test_get_by_name(self):
+        assert(self.client.get_by_name("Kinkrsoftware",limit=1,fields=['bedrijfsnaam'])=='[{"bedrijfsnaam": "Kinkrsoftware"}]')
+
+    def test_get_banktruptcies(self):
+        with pytest.raises(KeyError):
+            self.client.get_bankruptcies()
 
 
 

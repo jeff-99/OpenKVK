@@ -3,20 +3,23 @@ import urllib2
 import urllib
 import ast
 import json
+import re
 
-class Client(object):
+class BaseClient(object):
     """
-    Python wrapper for the OpenKVK API
+    The Base client is the absolute basic client to the OpenKVK API
+    It sets the basic configuration of the Client
 
+    :param string response_format: Sets the format of the responses
+    :param bool onlyActiveCompanies: Set's up the client to only query active companies
     """
 
     BASE_URL = "http://api.openkvk.nl/"
     DEFAULT_RESPONSE_FORMAT = "py"
     DEFAULT_LIMIT = 99
 
-    def __init__(self,response_format=None,limit=None,onlyActiveCompanies=True):
-        self.response_format = response_format or Client.DEFAULT_RESPONSE_FORMAT
-        self.limit = limit or Client.DEFAULT_LIMIT
+    def __init__(self,response_format=None,onlyActiveCompanies=True):
+        self.response_format = response_format or BaseClient.DEFAULT_RESPONSE_FORMAT
         self.onlyActiveCompanies = onlyActiveCompanies
 
 
@@ -54,6 +57,23 @@ class Client(object):
         query =query.replace('"', "'")
         return urllib.quote(query,safe="*;%'`=&")
 
+    def request(self,query):
+        """
+        Returns the raw response of the OpenKVK API.
+        You could use this method as a minimalistic wrapper for the API, it should save you 3-4 lines of code
+        """
+        url = BaseClient.BASE_URL+self.response_format+"/"+self._urlencode_query(query)
+        request = urllib2.urlopen(url)
+        response = request.read()
+        return response
+
+
+class QueryBuilder(BaseClient):
+    """
+    Class to handle all of the query building, formatting and communication with the BaseClient
+    With this class you could perform a custom query, with the additional convenience of a result parser
+
+    """
     def _query_divider(self,query,total):
         """
         Helper function to divide query into multiple queries to comply to the webservice limit
@@ -63,43 +83,41 @@ class Client(object):
         :returns: List of queries to execute
         :rtype: list
         """
-        if total > Client.DEFAULT_LIMIT:
-            pages = int(math.ceil(float(total) / float(Client.DEFAULT_LIMIT)))
+        if total > BaseClient.DEFAULT_LIMIT:
+            pages = int(math.ceil(float(total) / float(BaseClient.DEFAULT_LIMIT)))
         else:
             pages = 1
 
         query_buffer = []
         total = total
         offset = 0
-        limit = Client.DEFAULT_LIMIT if total > Client.DEFAULT_LIMIT else total
+        limit = BaseClient.DEFAULT_LIMIT if total > BaseClient.DEFAULT_LIMIT else total
         for i in range(pages):
             query_buffer.append("{0} LIMIT {1} OFFSET {2};".format(query,limit,offset))
             total -= limit
             offset += limit
-            if total < Client.DEFAULT_LIMIT:
+            if total < BaseClient.DEFAULT_LIMIT:
                 limit = total
 
         return query_buffer
 
-    def _query_construct_options(self,basequery,filters):
+    def _build_query(self,basequery,**kwargs):
         """
         Helper function for adding filters to the request
 
-        filters example:
-            {"plaats" : "Rotterdam",
-             "rechtsvorm" : "Besloten Vennootschap"}
+        possible filters:
+            - plaats (="Rotterdam")
+            - rechtsvorm (="Besloten Vennootschap")
 
         :param string basequery: SQL-92 compliant query base to add filters to
         :param dict filters: Dictionary containing filters
         """
-        filters = filters or {}
         query = basequery
         if self.onlyActiveCompanies:
             statement = " AND isnull(status)"
             query += statement
-        for key in filters:
-            statement = " AND {0} = '{1}'".format(key,filters[key])
-            query += statement
+        for key in kwargs:
+            query += " AND {0} = '{1}'".format(key,kwargs[key])
         return query
 
     def _pythonify_result(self, result):
@@ -172,7 +190,7 @@ class Client(object):
 
         return result
 
-    def _do_query(self,basequery,limit,filters=None):
+    def do_query(self,basequery,limit,**kwargs):
         """Return query results of *query*
 
         :param string query: SQL-92 valid query
@@ -180,19 +198,43 @@ class Client(object):
         :returns: Result set in set response format
         :rtype:
         """
-        query = self._query_construct_options(basequery,filters)
+        query = self._build_query(basequery,**kwargs)
         query_buffer = self._query_divider(query,limit)
 
         response_buffer = []
         for q in range(len(query_buffer)):
-            url = Client.BASE_URL+self.response_format+"/"+self._urlencode_query(query_buffer[q])
-            request = urllib2.urlopen(url)
-            response = request.read()
+            response = self.request(query_buffer[q])
             response_buffer.append(response)
 
         result = self._parse_query_results(response_buffer)
         return result
 
+    def query(self,query):
+        """Returns company information based on a custom query.
+        for direct interaction with the openkvk api, but with the convenience of the parsers used in this module
+
+        :param string query: A SQL-92 query string
+        """
+        if isinstance(query,basestring):
+            low = query.lower()
+            if 'limit' in low:
+                match = re.findall(r'limit \d+',low)[0]
+                key,value = match.split(' ')
+                limit = int(value)
+                query = low.replace(match, "")
+            else:
+                limit = 99
+            return self.do_query(query,limit)
+        else:
+            raise(ValueError('Query parameter should be a string'))
+
+class ApiClient(QueryBuilder):
+    """
+    The ApiClient is the complete python wrapper for the OpenKVK API.
+
+    :param string response_format: Sets the format of the responses
+    :param bool onlyActiveCompanies: Set's up the client to only query active companies
+    """
     def get_by_kvk(self, kvk, fields='*'):
         """Return company information in selected format if the the given *kvk* is found
 
@@ -201,7 +243,7 @@ class Client(object):
         :returns: Company information
         """
         basequery = "SELECT {0} FROM kvk WHERE kvks = {1}".format(",".join(fields),kvk)
-        return self._do_query(basequery,1)
+        return self.do_query(basequery,1)
 
 
     def get_by_name(self, name, limit=99, fields='*'):
@@ -213,9 +255,9 @@ class Client(object):
         :rtype: list
         """
         basequery = "SELECT {0} FROM kvk WHERE bedrijfsnaam ILIKE '%{1}%'".format(",".join(fields),name)
-        return self._do_query(basequery,limit)
+        return self.do_query(basequery,limit)
 
-    def get_by_sbi(self, sbi, limit=99, fields='*',filters=None):
+    def get_by_sbi(self, sbi, limit=99, fields='*',**kwargs):
         """Return a list of company information *sbicode* limited to *limit* records
 
         :param string name: Name of the company
@@ -223,9 +265,9 @@ class Client(object):
         :rtype: list
         """
         basequery = "SELECT {0} FROM kvk JOIN kvk_sbi ON kvk_sbi.kvk = kvk.kvk WHERE code = '{1}'".format(",".join(fields),sbi)
-        return self._do_query(basequery,limit,filters=None)
+        return self.do_query(basequery,limit,**kwargs)
 
-    def get_by_city(self,city,limit=99,fields='*',filters=None):
+    def get_by_city(self,city,limit=99,fields='*',**kwargs):
         """Return a list of company information *sbicode* limited to *limit* records
 
         :param string name: Name of the company
@@ -233,43 +275,33 @@ class Client(object):
         :rtype: list
         """
         basequery = "SELECT {0} FROM kvk WHERE plaats ILIKE '%{1}%'".format(",".join(fields),city)
-        return self._do_query(basequery,limit)
+        return self.do_query(basequery,limit,**kwargs)
 
-    def search(self, searchstring=None ):
-        """
-        Return a list of company information based on a fulltext search
-        """
-        basequery = "SELECT x.kvk, x.bedrijfsnaam, x.adres, x.postcode, x.plaats, x.type,NOT(anbikvk.kvks is null AND anbikvk.intrekking is null) AS 'anbi', status, x.kvks, x.sub FROM (SELECT kvk.kvk, kvk.bedrijfsnaam, kvk.adres, kvk.postcode, kvk.plaats, kvk.type, kvk.kvks, kvk.sub FROM sphinx_searchIndex('{0}', '{1}') AS fts, kvk WHERE kvk.kvk = fts.id) AS x LEFT JOIN anbikvk ON x.kvks = anbikvk.kvks LEFT JOIN faillissementen ON x.kvks = faillissementen.kvk".format(searchstring,'*')
-        return self._do_query(basequery,limit=200)
-
-    def get_by_postcode_distance(self,postcode,distance):
-        """Return a list of companies within a postcode range
-        :param string postcode: Dutch postcode
-        :param int distance: Distance from postcode in kilometres
-
-        example haversine formula :
-            R = 6373.0
-
-            lat1 = radians(52.2296756)
-            lon1 = radians(21.0122287)
-            lat2 = radians(52.406374)
-            lon2 = radians(16.9251681)
-
-            dlon = lon2 - lon1
-            dlat = lat2 - lat1
-            a = (sin(dlat/2))**2 + cos(lat1) * cos(lat2) * (sin(dlon/2))**2
-            c = 2 * atan2(sqrt(a), sqrt(1-a))
-            distance = R * c
-
-        """
-        pass
-
-    def get_custom(self,query,limit):
-        """Returns company information based on a custom query.
-        for low-level interaction with the openkvk api, but with the convenience of the parsers used in this module
-
-        :param string query: A SQL-92 query string
+    def get_bankruptcies(self,fields='*',limit=99,**kwargs):
+        """Returns list of bankrupt companies by specified parameters
+        method should at least contain one of the following parameters:
+            - kvk
+            - plaats
+            - rechtbank
+        :param int kvk: KVK number
+        :param string plaats: City name (case insensitive)
+        :param string rechtbank: Name of the court that issued the bankruptcy (case insensitive)
         :param int limit: Maximum number of records
-
+        :param list fields: List of company information fields to return
+        :rtype: list
         """
-        return self._do_query(query,limit)
+        basequery = "SELECT {0} FROM fallissementen ".format(",".join(fields))
+
+        if 'kvk' in kwargs:
+            basequery += "WHERE kvks = {0} ".format(kwargs['kvk'])
+            kwargs.pop('kvk',None)
+        elif 'plaats' in kwargs:
+            basequery += "WHERE plaats ILIKE '%{0}%' ".format(kwargs['plaats'])
+            kwargs.pop('plaats',None)
+        elif 'rechtbank' in kwargs:
+            basequery += "WHERE rechtbank ILIKE '%{0}%' ".format(kwargs['rechtbank'])
+            kwargs.pop('rechtbank', None)
+        else:
+            raise KeyError('Method should at least contain one of the following parameters: "kvk","plaats","rechtbank"')
+
+        return self.do_query(basequery,limit,**kwargs)

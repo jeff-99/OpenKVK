@@ -19,6 +19,14 @@ OpenKVK.Client module
     :undoc-members:
     :show-inheritance:
 
+OpenKVK.cli module
+------------------
+
+.. automodule:: OpenKVK.cli
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

@@ -1,5 +1,5 @@
 import argparse
-from OpenKVK.Client import Client
+from OpenKVK import ApiClient
 
 
 parser = argparse.ArgumentParser()
@@ -11,7 +11,7 @@ parser.add_argument('--format','-f', type=str, help="output format", default="cs
 
 def main():
     args = parser.parse_args()
-    client = Client(response_format=args.format)
+    client = ApiClient(response_format=args.format)
     result = None
     if args.kvk:
         result = client.get_by_kvk(kvk=args.kvk)
