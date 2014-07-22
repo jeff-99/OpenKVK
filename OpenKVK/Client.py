@@ -3,7 +3,11 @@ try:
     from urllib2 import urlopen
 except ImportError:
     from urllib.request import urlopen
-import urllib
+
+try:
+    from urllib import quote
+except:
+    from urllib.parse import quote
 import ast
 import json
 import re
@@ -58,7 +62,7 @@ class BaseClient(object):
         :param string query: Validated SQL-92 query as a string
         """
         query =query.replace('"', "'")
-        return urllib.quote(query,safe="*;%'`=&")
+        return quote(query,safe="*;%'`=&")
 
     def request(self,query):
         """
@@ -217,7 +221,7 @@ class QueryBuilder(BaseClient):
 
         :param string query: A SQL-92 query string
         """
-        if isinstance(query,basestring):
+        if isinstance(query,str):
             low = query.lower()
             if 'limit' in low:
                 match = re.findall(r'limit \d+',low)[0]

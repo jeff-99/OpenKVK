@@ -1,4 +1,5 @@
 # OpenKVK: API wrapper
+[![Build Status](https://travis-ci.org/jeff-99/OpenKVK.svg?branch=development)](https://travis-ci.org/jeff-99/OpenKVK)
 
 ## What is it ?
 
