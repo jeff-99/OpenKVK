@@ -1,5 +1,8 @@
 import math
-import urllib2
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
 import urllib
 import ast
 import json
@@ -63,7 +66,7 @@ class BaseClient(object):
         You could use this method as a minimalistic wrapper for the API, it should save you 3-4 lines of code
         """
         url = BaseClient.BASE_URL+self.response_format+"/"+self._urlencode_query(query)
-        request = urllib2.urlopen(url)
+        request = urlopen(url)
         response = request.read()
         return response
 
@@ -140,7 +143,6 @@ class QueryBuilder(BaseClient):
         """Takes raw response of :class:OpenKVK.Client.Client._do_query and parses the data to the preferred format
         :param list response_buffer: List of service responses
         """
-        print response_buffer
         result = {}
         if self.response_format == 'json':
             for response in response_buffer:
