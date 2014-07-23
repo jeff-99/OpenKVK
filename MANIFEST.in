@@ -1,0 +1,6 @@
+include CHANGES.md LICENSE README.md
+recursive-include docs *
+recursive-include OpenKVK/test *
+recursive-include OpenKVK/examples *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
