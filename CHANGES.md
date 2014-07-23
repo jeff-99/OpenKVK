@@ -1,3 +1,10 @@
+Version 0.3
+-----------
+
+- Added python 3 support
+- Fixxed additional filters
+- Updated documentation
+
 Version 0.2
 -----------
 

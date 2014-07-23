@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 from OpenKVK import ApiClient
 
@@ -20,7 +21,7 @@ def main():
     elif args.plaats:
         result = client.get_by_city(args.plaats,limit=1)
     else:
-        print "Je hebt geen argumenten ingevoerd"
+        print("Je hebt geen argumenten ingevoerd")
 
     if args.output:
         with open(args.output, 'w') as o:

@@ -71,8 +71,11 @@ class BaseClient(object):
         """
         url = BaseClient.BASE_URL+self.response_format+"/"+self._urlencode_query(query)
         request = urlopen(url)
-        response = request.read()
+        response = request.read().decode('utf-8')
         return response
+
+    def query(self,query):
+        return self.request(query)
 
 
 class QueryBuilder(BaseClient):
@@ -124,7 +127,12 @@ class QueryBuilder(BaseClient):
             statement = " AND isnull(status)"
             query += statement
         for key in kwargs:
-            query += " AND {0} = '{1}'".format(key,kwargs[key])
+            if key in ["kvk","bedrijfsnaam","kvks", "sub","adres","postcode","plaats",
+                       "type","status","website","vestiging","rechtsvorm",
+                       "lat_rad","lon_rad","anbi"]:
+                query += " AND {0} = '{1}'".format(key,kwargs[key])
+            else:
+                raise AttributeError("provided filter is not supported by the Openkvk API", key)
         return query
 
     def _pythonify_result(self, result):
@@ -173,7 +181,6 @@ class QueryBuilder(BaseClient):
             for response in response_buffer:
                 rows = response.split('\n')
                 for a,line in enumerate(rows):
-                    if isinstance(line,str):
                         columns = line.split(',')
                         record = []
                         for item in columns:
@@ -211,7 +218,6 @@ class QueryBuilder(BaseClient):
         for q in range(len(query_buffer)):
             response = self.request(query_buffer[q])
             response_buffer.append(response)
-
         result = self._parse_query_results(response_buffer)
         return result
 
@@ -223,16 +229,17 @@ class QueryBuilder(BaseClient):
         """
         if isinstance(query,str):
             low = query.lower()
-            if 'limit' in low:
+            if 'limit' in query:
                 match = re.findall(r'limit \d+',low)[0]
                 key,value = match.split(' ')
                 limit = int(value)
                 query = low.replace(match, "")
             else:
-                limit = 99
+                limit = BaseClient.DEFAULT_LIMIT
             return self.do_query(query,limit)
         else:
             raise(ValueError('Query parameter should be a string'))
+
 
 class ApiClient(QueryBuilder):
     """
@@ -252,7 +259,7 @@ class ApiClient(QueryBuilder):
         return self.do_query(basequery,1)
 
 
-    def get_by_name(self, name, limit=99, fields='*'):
+    def get_by_name(self, name, limit=99, fields='*',**kwargs):
         """Return a list of company information dicts for the given *name* limited to *limit* records
 
         :param string name: Name of the company
@@ -261,7 +268,7 @@ class ApiClient(QueryBuilder):
         :rtype: list
         """
         basequery = "SELECT {0} FROM kvk WHERE bedrijfsnaam ILIKE '%{1}%'".format(",".join(fields),name)
-        return self.do_query(basequery,limit)
+        return self.do_query(basequery,limit,**kwargs)
 
     def get_by_sbi(self, sbi, limit=99, fields='*',**kwargs):
         """Return a list of company information *sbicode* limited to *limit* records
