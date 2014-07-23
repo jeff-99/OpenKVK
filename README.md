@@ -95,6 +95,7 @@ from OpenKVK import BaseClient
 client = BaseClient()
 client.setResponseFormat('py')
 client.query("SELECT * FROM kvk WHERE kvks = 27312152")
+```
 
 ## License
 MIT
