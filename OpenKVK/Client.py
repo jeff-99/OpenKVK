@@ -229,7 +229,7 @@ class QueryBuilder(BaseClient):
         """
         if isinstance(query,str):
             low = query.lower()
-            if 'limit' in query:
+            if 'limit' in low:
                 match = re.findall(r'limit \d+',low)[0]
                 key,value = match.split(' ')
                 limit = int(value)
