@@ -1,3 +1,8 @@
+Version 0.4
+-----------
+
+- Bugfix QueryBuilder limiter
+
 Version 0.3
 -----------
 
